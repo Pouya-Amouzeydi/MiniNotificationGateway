@@ -5,7 +5,7 @@ using MiniNotificationGateway.Console.Domain.Events;
 using MiniNotificationGateway.Console.Infrastructure.Security;
 
 Console.WriteLine("Mini Notification Gateway");
-Console.WriteLine("Stage 3 Factory Method completed.");
+Console.WriteLine("Stage 4 State Pattern completed.");
 Console.WriteLine();
 
 IOtpCodeGenerator otpCodeGenerator = new SixDigitOtpCodeGenerator();
@@ -29,6 +29,19 @@ Console.WriteLine($"Recipient: {message.Recipient}");
 Console.WriteLine($"Content: {message.Content}");
 Console.WriteLine($"Created At: {message.CreatedAt}");
 Console.WriteLine($"Current Status: {message.Status}");
+Console.WriteLine($"Current State: {message.CurrentStateName}");
+Console.WriteLine();
+
+Console.WriteLine("Changing status to Sending...");
+message.MarkAsSending();
+Console.WriteLine($"Current Status: {message.Status}");
+Console.WriteLine($"Current State: {message.CurrentStateName}");
+Console.WriteLine();
+
+Console.WriteLine("Changing status to Sent...");
+message.MarkAsSent();
+Console.WriteLine($"Final Status: {message.Status}");
+Console.WriteLine($"Final State: {message.CurrentStateName}");
 Console.WriteLine();
 
 Console.WriteLine("Event Information:");
