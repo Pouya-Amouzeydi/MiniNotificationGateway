@@ -2,19 +2,28 @@
 using MiniNotificationGateway.Console.Application.Abstractions.Providers;
 using MiniNotificationGateway.Console.Application.Abstractions.Security;
 using MiniNotificationGateway.Console.Application.Factories;
+using MiniNotificationGateway.Console.Application.Providers;
 using MiniNotificationGateway.Console.Infrastructure.Providers.ProviderA;
 using MiniNotificationGateway.Console.Infrastructure.Providers.ProviderB;
 using MiniNotificationGateway.Console.Infrastructure.Security;
 
 Console.WriteLine("Mini Notification Gateway");
-Console.WriteLine("Stage 5 Adapter Pattern completed.");
+Console.WriteLine("Stage 6 Chain of Responsibility completed.");
 Console.WriteLine();
 
 IOtpCodeGenerator otpCodeGenerator = new SixDigitOtpCodeGenerator();
 IMessageFactory messageFactory = new OtpMessageFactory(otpCodeGenerator);
 
-INotificationProvider providerA = new ProviderAAdapter(new ProviderAClient());
-INotificationProvider providerB = new ProviderBAdapter(new ProviderBClient());
+INotificationProvider providerA = new ProviderAAdapter(
+    new ProviderAClient(() => 95));
+
+INotificationProvider providerB = new ProviderBAdapter(
+    new ProviderBClient(() => 50));
+
+INotificationProviderHandler providerAHandler = new NotificationProviderHandler(providerA);
+INotificationProviderHandler providerBHandler = new NotificationProviderHandler(providerB);
+
+providerAHandler.SetNext(providerBHandler);
 
 Console.WriteLine("Creating Message...");
 
@@ -27,20 +36,23 @@ Console.WriteLine($"Content: {message.Content}");
 Console.WriteLine($"Current Status: {message.Status}");
 Console.WriteLine();
 
-Console.WriteLine("Testing ProviderA Adapter...");
-var providerAResult = await providerA.SendAsync(message);
+Console.WriteLine("Selecting Provider...");
 
-Console.WriteLine($"Provider: {providerAResult.ProviderName}");
-Console.WriteLine($"Success: {providerAResult.IsSuccess}");
-Console.WriteLine($"Description: {providerAResult.Description}");
-Console.WriteLine();
+message.MarkAsSending();
 
-Console.WriteLine("Testing ProviderB Adapter...");
-var providerBResult = await providerB.SendAsync(message);
+var sendResult = await providerAHandler.HandleAsync(message);
 
-Console.WriteLine($"Provider: {providerBResult.ProviderName}");
-Console.WriteLine($"Success: {providerBResult.IsSuccess}");
-Console.WriteLine($"Description: {providerBResult.Description}");
-Console.WriteLine();
+if (sendResult.IsSuccess)
+{
+    message.MarkAsSent();
+    Console.WriteLine("Message Sent Successfully");
+}
+else
+{
+    message.MarkAsFailed();
+    Console.WriteLine("Message Failed");
+}
 
-Console.WriteLine("Adapter Pattern test completed.");
+Console.WriteLine($"Final Provider: {sendResult.ProviderName}");
+Console.WriteLine($"Final Result: {sendResult.Description}");
+Console.WriteLine($"Final Status: {message.Status}");
