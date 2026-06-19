@@ -6,6 +6,7 @@ using MiniNotificationGateway.Console.Application.Abstractions.Providers;
 using MiniNotificationGateway.Console.Application.Abstractions.Security;
 using MiniNotificationGateway.Console.Application.Abstractions.Strategies;
 using MiniNotificationGateway.Console.Application.Commands;
+using MiniNotificationGateway.Console.Application.Decorators;
 using MiniNotificationGateway.Console.Application.Events;
 using MiniNotificationGateway.Console.Application.Facades;
 using MiniNotificationGateway.Console.Application.Factories;
@@ -17,7 +18,7 @@ using MiniNotificationGateway.Console.Infrastructure.Providers.ProviderB;
 using MiniNotificationGateway.Console.Infrastructure.Security;
 
 Console.WriteLine("Mini Notification Gateway");
-Console.WriteLine("Stage 10 Facade Pattern completed.");
+Console.WriteLine("Stage 11 Decorator Pattern completed.");
 Console.WriteLine();
 
 INotificationEventPublisher eventPublisher = new NotificationEventPublisher();
@@ -52,11 +53,14 @@ ISendingStrategy sendingStrategy = new FailoverSendingStrategy(
 
 ICommandInvoker commandInvoker = new CommandInvoker();
 
-INotificationGatewayFacade notificationGateway = new NotificationGatewayFacade(
+INotificationGatewayFacade coreNotificationGateway = new NotificationGatewayFacade(
     messageFactory: messageFactory,
     sendingStrategy: sendingStrategy,
     commandInvoker: commandInvoker,
     eventPublisher: eventPublisher);
+
+INotificationGatewayFacade notificationGateway =
+    new LoggingNotificationGatewayFacadeDecorator(coreNotificationGateway);
 
 Console.WriteLine("Creating Message...");
 
