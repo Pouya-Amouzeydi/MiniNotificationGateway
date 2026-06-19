@@ -11,6 +11,7 @@ using MiniNotificationGateway.Console.Application.Events;
 using MiniNotificationGateway.Console.Application.Facades;
 using MiniNotificationGateway.Console.Application.Factories;
 using MiniNotificationGateway.Console.Application.Providers;
+using MiniNotificationGateway.Console.Application.Proxies;
 using MiniNotificationGateway.Console.Application.Strategies;
 using MiniNotificationGateway.Console.Infrastructure.Logging;
 using MiniNotificationGateway.Console.Infrastructure.Providers.ProviderA;
@@ -18,7 +19,7 @@ using MiniNotificationGateway.Console.Infrastructure.Providers.ProviderB;
 using MiniNotificationGateway.Console.Infrastructure.Security;
 
 Console.WriteLine("Mini Notification Gateway");
-Console.WriteLine("Stage 11 Decorator Pattern completed.");
+Console.WriteLine("Stage 12 Proxy Pattern completed.");
 Console.WriteLine();
 
 INotificationEventPublisher eventPublisher = new NotificationEventPublisher();
@@ -32,24 +33,17 @@ eventPublisher.Subscribe(inMemoryEventObserver);
 IOtpCodeGenerator otpCodeGenerator = new SixDigitOtpCodeGenerator();
 IMessageFactory messageFactory = new OtpMessageFactory(otpCodeGenerator);
 
-INotificationProvider providerA = new ProviderAAdapter(
-    new ProviderAClient(() => 95));
+INotificationProvider providerA = new ProviderAAdapter(new ProviderAClient(() => 95));
 
-INotificationProvider providerB = new ProviderBAdapter(
-    new ProviderBClient(() => 50));
+INotificationProvider providerB = new ProviderBAdapter(new ProviderBClient(() => 50));
 
-INotificationProviderHandler providerAHandler = new NotificationProviderHandler(
-    provider: providerA,
-    eventPublisher: eventPublisher);
+INotificationProviderHandler providerAHandler = new NotificationProviderHandler(provider: providerA, eventPublisher: eventPublisher);
 
-INotificationProviderHandler providerBHandler = new NotificationProviderHandler(
-    provider: providerB,
-    eventPublisher: eventPublisher);
+INotificationProviderHandler providerBHandler = new NotificationProviderHandler(provider: providerB, eventPublisher: eventPublisher);
 
 providerAHandler.SetNext(providerBHandler);
 
-ISendingStrategy sendingStrategy = new FailoverSendingStrategy(
-    firstProviderHandler: providerAHandler);
+ISendingStrategy sendingStrategy = new FailoverSendingStrategy(firstProviderHandler: providerAHandler);
 
 ICommandInvoker commandInvoker = new CommandInvoker();
 
@@ -59,8 +53,9 @@ INotificationGatewayFacade coreNotificationGateway = new NotificationGatewayFaca
     commandInvoker: commandInvoker,
     eventPublisher: eventPublisher);
 
-INotificationGatewayFacade notificationGateway =
-    new LoggingNotificationGatewayFacadeDecorator(coreNotificationGateway);
+INotificationGatewayFacade loggingNotificationGateway = new LoggingNotificationGatewayFacadeDecorator(coreNotificationGateway);
+
+INotificationGatewayFacade notificationGateway = new RateLimitedNotificationGatewayFacadeProxy(innerGateway: loggingNotificationGateway,        maxRequestsPerRecipient: 3);
 
 Console.WriteLine("Creating Message...");
 
