@@ -1,22 +1,23 @@
 ﻿using MiniNotificationGateway.Console.Application.Abstractions.Commands;
 using MiniNotificationGateway.Console.Application.Abstractions.Events;
+using MiniNotificationGateway.Console.Application.Abstractions.Facades;
 using MiniNotificationGateway.Console.Application.Abstractions.Factories;
 using MiniNotificationGateway.Console.Application.Abstractions.Providers;
 using MiniNotificationGateway.Console.Application.Abstractions.Security;
 using MiniNotificationGateway.Console.Application.Abstractions.Strategies;
 using MiniNotificationGateway.Console.Application.Commands;
 using MiniNotificationGateway.Console.Application.Events;
+using MiniNotificationGateway.Console.Application.Facades;
 using MiniNotificationGateway.Console.Application.Factories;
 using MiniNotificationGateway.Console.Application.Providers;
 using MiniNotificationGateway.Console.Application.Strategies;
-using MiniNotificationGateway.Console.Domain.Events;
 using MiniNotificationGateway.Console.Infrastructure.Logging;
 using MiniNotificationGateway.Console.Infrastructure.Providers.ProviderA;
 using MiniNotificationGateway.Console.Infrastructure.Providers.ProviderB;
 using MiniNotificationGateway.Console.Infrastructure.Security;
 
 Console.WriteLine("Mini Notification Gateway");
-Console.WriteLine("Stage 9 Strategy Pattern completed.");
+Console.WriteLine("Stage 10 Facade Pattern completed.");
 Console.WriteLine();
 
 INotificationEventPublisher eventPublisher = new NotificationEventPublisher();
@@ -51,34 +52,27 @@ ISendingStrategy sendingStrategy = new FailoverSendingStrategy(
 
 ICommandInvoker commandInvoker = new CommandInvoker();
 
+INotificationGatewayFacade notificationGateway = new NotificationGatewayFacade(
+    messageFactory: messageFactory,
+    sendingStrategy: sendingStrategy,
+    commandInvoker: commandInvoker,
+    eventPublisher: eventPublisher);
+
 Console.WriteLine("Creating Message...");
 
-var message = messageFactory.Create("09123456789");
-
-await eventPublisher.PublishAsync(new NotificationEvent(
-    eventType: NotificationEventType.MessageCreated,
-    messageId: message.MessageId,
-    description: "Message Created"));
+var response = await notificationGateway.SendOtpAsync("09123456789");
 
 Console.WriteLine();
 Console.WriteLine("Message Information:");
-Console.WriteLine($"Message Id: {message.MessageId}");
-Console.WriteLine($"Recipient: {message.Recipient}");
-Console.WriteLine($"Content: {message.Content}");
-Console.WriteLine($"Current Status: {message.Status}");
+Console.WriteLine($"Message Id: {response.Message.MessageId}");
+Console.WriteLine($"Recipient: {response.Message.Recipient}");
+Console.WriteLine($"Content: {response.Message.Content}");
+Console.WriteLine($"Current Status: {response.Message.Status}");
 Console.WriteLine();
 
-Console.WriteLine("Selecting Provider...");
-
-var sendOtpCommand = new SendOtpCommand(
-    message: message,
-    sendingStrategy: sendingStrategy);
-
-var sendResult = await commandInvoker.InvokeAsync(sendOtpCommand);
-
-Console.WriteLine($"Final Provider: {sendResult.ProviderName}");
-Console.WriteLine($"Final Result: {sendResult.Description}");
-Console.WriteLine($"Final Status: {message.Status}");
+Console.WriteLine($"Final Provider: {response.SendResult.ProviderName}");
+Console.WriteLine($"Final Result: {response.SendResult.Description}");
+Console.WriteLine($"Final Status: {response.Message.Status}");
 Console.WriteLine();
 
 Console.WriteLine("Registered Events:");
