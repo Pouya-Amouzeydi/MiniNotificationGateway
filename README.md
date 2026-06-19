@@ -112,6 +112,7 @@ OtpMessageFactory
 ```
 
 The system does not create OTP messages directly in `Program.cs`.
+
 Instead, message creation is handled by `OtpMessageFactory`.
 
 This factory creates a message with OTP content like:
@@ -420,7 +421,9 @@ DemoOutputWriter
 
 The class diagram is available here:
 
-[View Class Diagram](docs/ClassDiagram.md)
+[View Class Diagram](ClassDiagram.md)
+
+---
 
 ## Demo Output
 

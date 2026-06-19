@@ -88,6 +88,16 @@ class ProviderAClient {
     +SendSmsAsync(string, string) Task~bool~
 }
 
+class ProviderBRequest {
+    +string Destination
+    +string Body
+}
+
+class ProviderBResponse {
+    +bool Delivered
+    +string TrackingCode
+}
+
 class ProviderBClient {
     +DeliverAsync(ProviderBRequest) Task~ProviderBResponse~
 }
@@ -106,6 +116,8 @@ INotificationProvider <|.. ProviderAAdapter
 INotificationProvider <|.. ProviderBAdapter
 ProviderAAdapter --> ProviderAClient
 ProviderBAdapter --> ProviderBClient
+ProviderBClient --> ProviderBRequest
+ProviderBClient --> ProviderBResponse
 ProviderAAdapter --> SendResult
 ProviderBAdapter --> SendResult
 
@@ -154,7 +166,7 @@ class FailoverSendingStrategy {
 ISendingStrategy <|.. FailoverSendingStrategy
 FailoverSendingStrategy --> INotificationProviderHandler
 
-class ICommand~TResult~ {
+class ICommand {
     <<interface>>
     +ExecuteAsync() Task~TResult~
 }
@@ -264,6 +276,20 @@ NotificationEventPublisher --> IEventObserver
 NotificationEventPublisher --> NotificationEvent
 NotificationEvent --> NotificationEventType
 
+class IApplicationLogger {
+    <<interface>>
+    +Log(string)
+}
+
+class InMemoryApplicationLogger {
+    +Logs IReadOnlyCollection~string~
+    +Log(string)
+}
+
+IApplicationLogger <|.. InMemoryApplicationLogger
+LoggingNotificationGatewayFacadeDecorator --> IApplicationLogger
+RateLimitedNotificationGatewayFacadeProxy --> IApplicationLogger
+
 class DemoOutputWriter {
     +Write(OtpSendResponse, IReadOnlyCollection~NotificationEvent~)
 }
@@ -279,15 +305,39 @@ Program --> DemoOutputWriter
 
 ## Pattern Map
 
-| Design Pattern | Main Classes |
-|---|---|
-| Factory Method | `IMessageFactory`, `OtpMessageFactory` |
-| Adapter | `ProviderAAdapter`, `ProviderBAdapter` |
-| Chain of Responsibility | `INotificationProviderHandler`, `NotificationProviderHandler` |
-| State | `IMessageState`, `CreatedMessageState`, `SendingMessageState`, `SentMessageState`, `FailedMessageState` |
-| Observer | `INotificationEventPublisher`, `NotificationEventPublisher`, `IEventObserver`, `InMemoryEventObserver`, `ConsoleEventObserver` |
-| Command | `ICommand`, `SendOtpCommand`, `ICommandInvoker`, `CommandInvoker` |
-| Strategy | `ISendingStrategy`, `FailoverSendingStrategy` |
-| Facade | `INotificationGatewayFacade`, `NotificationGatewayFacade` |
-| Decorator | `LoggingNotificationGatewayFacadeDecorator` |
-| Proxy | `RateLimitedNotificationGatewayFacadeProxy` |
+| Design Pattern          | Main Classes                                                                                                                   |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Factory Method          | `IMessageFactory`, `OtpMessageFactory`                                                                                         |
+| Adapter                 | `ProviderAAdapter`, `ProviderBAdapter`                                                                                         |
+| Chain of Responsibility | `INotificationProviderHandler`, `NotificationProviderHandler`                                                                  |
+| State                   | `IMessageState`, `CreatedMessageState`, `SendingMessageState`, `SentMessageState`, `FailedMessageState`                        |
+| Observer                | `INotificationEventPublisher`, `NotificationEventPublisher`, `IEventObserver`, `InMemoryEventObserver`, `ConsoleEventObserver` |
+| Command                 | `ICommand`, `SendOtpCommand`, `ICommandInvoker`, `CommandInvoker`                                                              |
+| Strategy                | `ISendingStrategy`, `FailoverSendingStrategy`                                                                                  |
+| Facade                  | `INotificationGatewayFacade`, `NotificationGatewayFacade`                                                                      |
+| Decorator               | `LoggingNotificationGatewayFacadeDecorator`                                                                                    |
+| Proxy                   | `RateLimitedNotificationGatewayFacadeProxy`                                                                                    |
+
+---
+
+## Main Flow
+
+```mermaid
+flowchart TD
+
+A[Program.cs] --> B[INotificationGatewayFacade]
+B --> C[RateLimitedNotificationGatewayFacadeProxy]
+C --> D[LoggingNotificationGatewayFacadeDecorator]
+D --> E[NotificationGatewayFacade]
+E --> F[OtpMessageFactory]
+E --> G[SendOtpCommand]
+G --> H[FailoverSendingStrategy]
+H --> I[ProviderAHandler]
+I --> J[ProviderAAdapter]
+J --> K{ProviderA Success?}
+K -- "No" --> L[ProviderBHandler]
+L --> M[ProviderBAdapter]
+M --> N[Message Sent Successfully]
+K -- "Yes" --> N
+N --> O[Final Status: Sent]
+```
