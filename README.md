@@ -416,6 +416,12 @@ DemoOutputWriter
 
 ---
 
+## Class Diagram
+
+The class diagram is available here:
+
+[View Class Diagram](docs/ClassDiagram.md)
+
 ## Demo Output
 
 Sample output:
