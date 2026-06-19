@@ -3,6 +3,7 @@ using MiniNotificationGateway.Console.Application.Abstractions.Commands;
 using MiniNotificationGateway.Console.Application.Abstractions.Events;
 using MiniNotificationGateway.Console.Application.Abstractions.Facades;
 using MiniNotificationGateway.Console.Application.Abstractions.Factories;
+using MiniNotificationGateway.Console.Application.Abstractions.Logging;
 using MiniNotificationGateway.Console.Application.Abstractions.Security;
 using MiniNotificationGateway.Console.Application.Abstractions.Strategies;
 using MiniNotificationGateway.Console.Application.Commands;
@@ -17,6 +18,7 @@ using MiniNotificationGateway.Console.Infrastructure.Logging;
 using MiniNotificationGateway.Console.Infrastructure.Providers.ProviderA;
 using MiniNotificationGateway.Console.Infrastructure.Providers.ProviderB;
 using MiniNotificationGateway.Console.Infrastructure.Security;
+using MiniNotificationGateway.Console.Presentation.ConsoleOutput;
 
 namespace MiniNotificationGateway.Console.DependencyInjection;
 
@@ -30,13 +32,24 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<ICommandInvoker, CommandInvoker>();
 
-        services.AddSingleton<INotificationEventPublisher, NotificationEventPublisher>();
+        services.AddSingleton<NotificationEventPublisher>();
+        services.AddSingleton<INotificationEventPublisher>(
+            serviceProvider => serviceProvider.GetRequiredService<NotificationEventPublisher>());
+
         services.AddSingleton<ConsoleEventObserver>();
         services.AddSingleton<InMemoryEventObserver>();
 
-        services.AddSingleton<ProviderAClient>(_ => new ProviderAClient(() => 95));
+        services.AddSingleton<InMemoryApplicationLogger>();
+        services.AddSingleton<IApplicationLogger>(
+            serviceProvider => serviceProvider.GetRequiredService<InMemoryApplicationLogger>());
 
-        services.AddSingleton<ProviderBClient>(_ => new ProviderBClient(() => 50));
+        services.AddSingleton<DemoOutputWriter>();
+
+        services.AddSingleton<ProviderAClient>(_ =>
+            new ProviderAClient(() => 95));
+
+        services.AddSingleton<ProviderBClient>(_ =>
+            new ProviderBClient(() => 50));
 
         services.AddSingleton<ProviderAAdapter>();
         services.AddSingleton<ProviderBAdapter>();
@@ -67,22 +80,25 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<INotificationGatewayFacade>(serviceProvider =>
         {
-            var eventPublisher = serviceProvider.GetRequiredService<INotificationEventPublisher>();
-
-            var consoleEventObserver = serviceProvider.GetRequiredService<ConsoleEventObserver>();
+            var eventPublisher = serviceProvider.GetRequiredService<NotificationEventPublisher>();
 
             var inMemoryEventObserver = serviceProvider.GetRequiredService<InMemoryEventObserver>();
 
-            eventPublisher.Subscribe(consoleEventObserver);
             eventPublisher.Subscribe(inMemoryEventObserver);
+
+            var applicationLogger = serviceProvider.GetRequiredService<IApplicationLogger>();
 
             var coreGateway = serviceProvider.GetRequiredService<NotificationGatewayFacade>();
 
-            var loggingGateway = new LoggingNotificationGatewayFacadeDecorator(coreGateway);
+            var loggingGateway =
+                new LoggingNotificationGatewayFacadeDecorator(
+                    innerGateway: coreGateway,
+                    logger: applicationLogger);
 
             var rateLimitedGateway =
                 new RateLimitedNotificationGatewayFacadeProxy(
                     innerGateway: loggingGateway,
+                    logger: applicationLogger,
                     maxRequestsPerRecipient: 3);
 
             return rateLimitedGateway;

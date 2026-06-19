@@ -1,4 +1,5 @@
 ﻿using MiniNotificationGateway.Console.Application.Abstractions.Facades;
+using MiniNotificationGateway.Console.Application.Abstractions.Logging;
 using MiniNotificationGateway.Console.Application.Results;
 
 namespace MiniNotificationGateway.Console.Application.Proxies;
@@ -6,11 +7,13 @@ namespace MiniNotificationGateway.Console.Application.Proxies;
 public sealed class RateLimitedNotificationGatewayFacadeProxy : INotificationGatewayFacade
 {
     private readonly INotificationGatewayFacade _innerGateway;
+    private readonly IApplicationLogger _logger;
     private readonly int _maxRequestsPerRecipient;
     private readonly Dictionary<string, int> _recipientRequestCounts = new();
 
     public RateLimitedNotificationGatewayFacadeProxy(
         INotificationGatewayFacade innerGateway,
+        IApplicationLogger logger,
         int maxRequestsPerRecipient)
     {
         if (maxRequestsPerRecipient <= 0)
@@ -21,6 +24,7 @@ public sealed class RateLimitedNotificationGatewayFacadeProxy : INotificationGat
         }
 
         _innerGateway = innerGateway ?? throw new ArgumentNullException(nameof(innerGateway));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _maxRequestsPerRecipient = maxRequestsPerRecipient;
     }
 
@@ -42,13 +46,17 @@ public sealed class RateLimitedNotificationGatewayFacadeProxy : INotificationGat
 
         if (currentRequestCount >= _maxRequestsPerRecipient)
         {
-            throw new InvalidOperationException(
-                $"OTP request limit exceeded for recipient {normalizedRecipient}.");
+            var errorMessage =
+                $"OTP request limit exceeded for recipient {normalizedRecipient}.";
+
+            _logger.Log($"[Rate Limit Proxy] {errorMessage}");
+
+            throw new InvalidOperationException(errorMessage);
         }
 
         _recipientRequestCounts[normalizedRecipient] = currentRequestCount + 1;
 
-        System.Console.WriteLine(
+        _logger.Log(
             $"[Rate Limit Proxy] Request allowed for {normalizedRecipient}. " +
             $"Request count: {_recipientRequestCounts[normalizedRecipient]}/{_maxRequestsPerRecipient}");
 
