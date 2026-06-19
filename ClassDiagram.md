@@ -275,3 +275,19 @@ Program --> ServiceCollectionExtensions
 Program --> INotificationGatewayFacade
 Program --> InMemoryEventObserver
 Program --> DemoOutputWriter
+```
+
+## Pattern Map
+
+| Design Pattern | Main Classes |
+|---|---|
+| Factory Method | `IMessageFactory`, `OtpMessageFactory` |
+| Adapter | `ProviderAAdapter`, `ProviderBAdapter` |
+| Chain of Responsibility | `INotificationProviderHandler`, `NotificationProviderHandler` |
+| State | `IMessageState`, `CreatedMessageState`, `SendingMessageState`, `SentMessageState`, `FailedMessageState` |
+| Observer | `INotificationEventPublisher`, `NotificationEventPublisher`, `IEventObserver`, `InMemoryEventObserver`, `ConsoleEventObserver` |
+| Command | `ICommand`, `SendOtpCommand`, `ICommandInvoker`, `CommandInvoker` |
+| Strategy | `ISendingStrategy`, `FailoverSendingStrategy` |
+| Facade | `INotificationGatewayFacade`, `NotificationGatewayFacade` |
+| Decorator | `LoggingNotificationGatewayFacadeDecorator` |
+| Proxy | `RateLimitedNotificationGatewayFacadeProxy` |
