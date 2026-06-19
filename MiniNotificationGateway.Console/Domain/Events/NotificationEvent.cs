@@ -17,6 +17,6 @@ public sealed class NotificationEvent
         EventType = eventType;
         MessageId = messageId;
         Description = description;
-        OccurredAt = DateTime.UtcNow;
+        OccurredAt = DateTime.Now;
     }
 }
