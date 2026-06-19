@@ -1,7 +1,9 @@
-﻿using MiniNotificationGateway.Console.Application.Abstractions.Events;
+﻿using MiniNotificationGateway.Console.Application.Abstractions.Commands;
+using MiniNotificationGateway.Console.Application.Abstractions.Events;
 using MiniNotificationGateway.Console.Application.Abstractions.Factories;
 using MiniNotificationGateway.Console.Application.Abstractions.Providers;
 using MiniNotificationGateway.Console.Application.Abstractions.Security;
+using MiniNotificationGateway.Console.Application.Commands;
 using MiniNotificationGateway.Console.Application.Events;
 using MiniNotificationGateway.Console.Application.Factories;
 using MiniNotificationGateway.Console.Application.Providers;
@@ -12,7 +14,7 @@ using MiniNotificationGateway.Console.Infrastructure.Providers.ProviderB;
 using MiniNotificationGateway.Console.Infrastructure.Security;
 
 Console.WriteLine("Mini Notification Gateway");
-Console.WriteLine("Stage 7 Observer Pattern completed.");
+Console.WriteLine("Stage 8 Command Pattern completed.");
 Console.WriteLine();
 
 INotificationEventPublisher eventPublisher = new NotificationEventPublisher();
@@ -42,6 +44,8 @@ INotificationProviderHandler providerBHandler = new NotificationProviderHandler(
 
 providerAHandler.SetNext(providerBHandler);
 
+ICommandInvoker commandInvoker = new CommandInvoker();
+
 Console.WriteLine("Creating Message...");
 
 var message = messageFactory.Create("09123456789");
@@ -61,18 +65,11 @@ Console.WriteLine();
 
 Console.WriteLine("Selecting Provider...");
 
-message.MarkAsSending();
+var sendOtpCommand = new SendOtpCommand(
+    message: message,
+    providerHandler: providerAHandler);
 
-var sendResult = await providerAHandler.HandleAsync(message);
-
-if (sendResult.IsSuccess)
-{
-    message.MarkAsSent();
-}
-else
-{
-    message.MarkAsFailed();
-}
+var sendResult = await commandInvoker.InvokeAsync(sendOtpCommand);
 
 Console.WriteLine($"Final Provider: {sendResult.ProviderName}");
 Console.WriteLine($"Final Result: {sendResult.Description}");
