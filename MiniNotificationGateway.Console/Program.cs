@@ -3,10 +3,12 @@ using MiniNotificationGateway.Console.Application.Abstractions.Events;
 using MiniNotificationGateway.Console.Application.Abstractions.Factories;
 using MiniNotificationGateway.Console.Application.Abstractions.Providers;
 using MiniNotificationGateway.Console.Application.Abstractions.Security;
+using MiniNotificationGateway.Console.Application.Abstractions.Strategies;
 using MiniNotificationGateway.Console.Application.Commands;
 using MiniNotificationGateway.Console.Application.Events;
 using MiniNotificationGateway.Console.Application.Factories;
 using MiniNotificationGateway.Console.Application.Providers;
+using MiniNotificationGateway.Console.Application.Strategies;
 using MiniNotificationGateway.Console.Domain.Events;
 using MiniNotificationGateway.Console.Infrastructure.Logging;
 using MiniNotificationGateway.Console.Infrastructure.Providers.ProviderA;
@@ -14,7 +16,7 @@ using MiniNotificationGateway.Console.Infrastructure.Providers.ProviderB;
 using MiniNotificationGateway.Console.Infrastructure.Security;
 
 Console.WriteLine("Mini Notification Gateway");
-Console.WriteLine("Stage 8 Command Pattern completed.");
+Console.WriteLine("Stage 9 Strategy Pattern completed.");
 Console.WriteLine();
 
 INotificationEventPublisher eventPublisher = new NotificationEventPublisher();
@@ -44,6 +46,9 @@ INotificationProviderHandler providerBHandler = new NotificationProviderHandler(
 
 providerAHandler.SetNext(providerBHandler);
 
+ISendingStrategy sendingStrategy = new FailoverSendingStrategy(
+    firstProviderHandler: providerAHandler);
+
 ICommandInvoker commandInvoker = new CommandInvoker();
 
 Console.WriteLine("Creating Message...");
@@ -67,7 +72,7 @@ Console.WriteLine("Selecting Provider...");
 
 var sendOtpCommand = new SendOtpCommand(
     message: message,
-    providerHandler: providerAHandler);
+    sendingStrategy: sendingStrategy);
 
 var sendResult = await commandInvoker.InvokeAsync(sendOtpCommand);
 
