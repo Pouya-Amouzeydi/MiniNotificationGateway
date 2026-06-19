@@ -1,61 +1,23 @@
-﻿using MiniNotificationGateway.Console.Application.Abstractions.Commands;
-using MiniNotificationGateway.Console.Application.Abstractions.Events;
+﻿using Microsoft.Extensions.DependencyInjection;
 using MiniNotificationGateway.Console.Application.Abstractions.Facades;
-using MiniNotificationGateway.Console.Application.Abstractions.Factories;
-using MiniNotificationGateway.Console.Application.Abstractions.Providers;
-using MiniNotificationGateway.Console.Application.Abstractions.Security;
-using MiniNotificationGateway.Console.Application.Abstractions.Strategies;
-using MiniNotificationGateway.Console.Application.Commands;
-using MiniNotificationGateway.Console.Application.Decorators;
-using MiniNotificationGateway.Console.Application.Events;
-using MiniNotificationGateway.Console.Application.Facades;
-using MiniNotificationGateway.Console.Application.Factories;
-using MiniNotificationGateway.Console.Application.Providers;
-using MiniNotificationGateway.Console.Application.Proxies;
-using MiniNotificationGateway.Console.Application.Strategies;
+using MiniNotificationGateway.Console.DependencyInjection;
 using MiniNotificationGateway.Console.Infrastructure.Logging;
-using MiniNotificationGateway.Console.Infrastructure.Providers.ProviderA;
-using MiniNotificationGateway.Console.Infrastructure.Providers.ProviderB;
-using MiniNotificationGateway.Console.Infrastructure.Security;
 
 Console.WriteLine("Mini Notification Gateway");
-Console.WriteLine("Stage 12 Proxy Pattern completed.");
+Console.WriteLine("Stage 13 Dependency Injection completed.");
 Console.WriteLine();
 
-INotificationEventPublisher eventPublisher = new NotificationEventPublisher();
+var services = new ServiceCollection();
 
-var consoleEventObserver = new ConsoleEventObserver();
-var inMemoryEventObserver = new InMemoryEventObserver();
+services.AddMiniNotificationGateway();
 
-eventPublisher.Subscribe(consoleEventObserver);
-eventPublisher.Subscribe(inMemoryEventObserver);
+using var serviceProvider = services.BuildServiceProvider();
 
-IOtpCodeGenerator otpCodeGenerator = new SixDigitOtpCodeGenerator();
-IMessageFactory messageFactory = new OtpMessageFactory(otpCodeGenerator);
+var notificationGateway =
+    serviceProvider.GetRequiredService<INotificationGatewayFacade>();
 
-INotificationProvider providerA = new ProviderAAdapter(new ProviderAClient(() => 95));
-
-INotificationProvider providerB = new ProviderBAdapter(new ProviderBClient(() => 50));
-
-INotificationProviderHandler providerAHandler = new NotificationProviderHandler(provider: providerA, eventPublisher: eventPublisher);
-
-INotificationProviderHandler providerBHandler = new NotificationProviderHandler(provider: providerB, eventPublisher: eventPublisher);
-
-providerAHandler.SetNext(providerBHandler);
-
-ISendingStrategy sendingStrategy = new FailoverSendingStrategy(firstProviderHandler: providerAHandler);
-
-ICommandInvoker commandInvoker = new CommandInvoker();
-
-INotificationGatewayFacade coreNotificationGateway = new NotificationGatewayFacade(
-    messageFactory: messageFactory,
-    sendingStrategy: sendingStrategy,
-    commandInvoker: commandInvoker,
-    eventPublisher: eventPublisher);
-
-INotificationGatewayFacade loggingNotificationGateway = new LoggingNotificationGatewayFacadeDecorator(coreNotificationGateway);
-
-INotificationGatewayFacade notificationGateway = new RateLimitedNotificationGatewayFacadeProxy(innerGateway: loggingNotificationGateway,        maxRequestsPerRecipient: 3);
+var inMemoryEventObserver =
+    serviceProvider.GetRequiredService<InMemoryEventObserver>();
 
 Console.WriteLine("Creating Message...");
 
